@@ -49,6 +49,8 @@ Hybrid_CNN_NN.py - Trains CNN and NN with PNG + specified material values as inp
 
 Reinforcement_Learning_code.py - The actual RL framework which utilizes the Hybrid CNN NN to train the RL Agent.
 
+Voronoi_Lattice_2D.py - A seperate unrelated script, which from input dimensions and parameters can generate a 2D voronoi lattice as a cad drawing file. This could potentially in the the future be upgraded to replace the nTop software for generating the lattices.
+
 --------------------
 
 Folders:
