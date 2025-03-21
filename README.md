@@ -1,19 +1,31 @@
 # Heterogeneous_Lattice_RL
 Reinforcement Learning Framework for designed optimized heterogeneous lattice structure utilizing Voronoi seeding theory
 
+
+
 To Run Reinforcement Learning, one must:
+
 1: Generate training data by creating lattice structures and compression testing them (or simulations)
+
 2: Utilize stl_to_png python file to generate png files for CNN to read
+
 3: Utilize Extract_curves_and_E_c to extract the targets for the pngs, such that CNN can be trained
+
 4: Utilize flip_images_artificial_data to 4x amount of data, by mirroring all pngs in x y and z planes and copying the targets
+
 5: Run Hybrid_CNN_NN to train CNN
+
 6: set total_timesteps in Reinforcement_Learning_code, and run it for the desired training duration
 
 
 To run on PRIME cluster
+
 Go to prime_RL_heterogneous folder - ensure RL_prime_code has correct total_timesteps and other parameters.
+
 Ensure all training data (pngs and npz data files with E_c and curves) are in correct format and has correct names to interact with RL and CNN code
+
 scp the prime_RL_heterogeneous folder to prime /com/meadd (This folder includes slightly varied versions of the necessary files for PRIME to run: RL code, CNN code, training pngs and target curves and E_cs.)
+
 Simply run the RL_prime_code
 
 
