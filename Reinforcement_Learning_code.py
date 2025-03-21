@@ -65,7 +65,7 @@ class LatticeEnv(Env):
         self.current_step += 1
         
         # Generate lattice stl structure using nTop command line and json input files
-        filename, stl_path = self.generate_lattice(action)
+        filename, stl_path, rel_density = self.generate_lattice(action)
 
         # Convert stl of lattice to png
         image_path = self.stl_to_png(filename=filename, stl_path=stl_path)
@@ -84,7 +84,7 @@ class LatticeEnv(Env):
         obs = np.array([obs1, obs2, obs3], dtype = np.float32)
 
         # Reward function
-        reward = self.reward_calc(stress=stress, E_c=E_c, action=action)
+        reward = self.reward_calc(stress=stress, E_c=E_c, rel_density=rel_density, action=action)
         
         done = True # Define episode termination condition
         truncated = False
@@ -95,7 +95,7 @@ class LatticeEnv(Env):
         # Generate Json file form action
         # run json through ntop
         # Name file according to self.count
-        self.count += 1
+        self.count = 1 # += 1 Can change to +=1 if want to save all stls and jsons from training. NOT RECOMMENDED, as training erquires 1000s of steps
         print("Generating Lattice Structure "+str(self.count)+"...")
         input_filename = os.path.join(RL_folder, f"RL_input_{self.count}.json")
         output_filename = os.path.join(RL_folder, f"RL_output_{self.count}.json")
@@ -127,10 +127,19 @@ class LatticeEnv(Env):
         # Run nTopCL
         subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
+        # Extract relative density "val" from the output JSON
+        try:
+            with open(output_filename, 'r') as f:
+                output_data = json.load(f)
+                val = output_data[0]["value"]["val"]
+                rounded_val = round(val, 3)  # Round to 3 significant digits
+        except (KeyError, IndexError, json.JSONDecodeError):
+            rounded_val = "ERROR"
+
         filename = str(self.count)+".stl"
         stl_path = os.path.join(RL_folder, filename)
 
-        return filename, stl_path
+        return filename, stl_path, rounded_val
     
     def stl_to_png(self, filename, stl_path):
         # Load the STL file
@@ -181,11 +190,11 @@ class LatticeEnv(Env):
         #Stress is 32 points in which correspond to stress values at np.linspace(0.0, 0.3, 32) strain values
         return strain_curve, stress_curve, e_c
 
-    def reward_calc(self, stress, E_c, action):
+    def reward_calc(self, stress, E_c, rel_density, action):
         #Change reward function to alter RL optimizaion
         bt = action[0] # Beam thickness
         cc = action[1] # Voronoi Cell Count
-        reward = E_c.item()*2 + max(stress).item()*5 - bt*20 - cc/20
+        reward = E_c.item()*2 + max(stress).item()*5 - bt*20 - cc/20 - rel_density*10
         return float(reward)
 
 

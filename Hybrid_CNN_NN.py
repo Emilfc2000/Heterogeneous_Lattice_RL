@@ -76,6 +76,9 @@ class HybridCNN_NN(nn.Module):
 # ---------------------------------
 # 
 class LatticeDataset(Dataset):
+    '''
+    This class should be customized based on the exact data and format used for training. This is heavily customized for my data.
+    '''
     def __init__(self, image_folder, data_file, stress_norm):
         self.image_folder = image_folder
         self.data = np.load(data_file, allow_pickle=True)
@@ -86,9 +89,6 @@ class LatticeDataset(Dataset):
         self.stress_norm = stress_norm # Max stress in MPa (Set based on dataset)
 
         self.transform = transforms.Compose([
-            #transforms.RandomRotation(10),
-            #transforms.ColorJitter(brightness=0.2, contrast=0.2),
-            #transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Resize((512, 512)),
         ])
@@ -139,8 +139,10 @@ class LatticeDataset(Dataset):
 # 🔹 Training Function
 # ---------------------------------
 def custom_loss(pred, true):
-    '''Custom loss function, defined s´due to the uncentanty of the results.
-    With this function, the error of a point will be 0 if it is within X of the true value'''
+    '''
+    Custom loss function, defined s´due to the uncentanty of the results.
+    With this function, the error of a point will be 0 if it is within X of the true value
+    '''
     loss_cutoff = 0.05 # if within 5% of true, give 0 error
     rel_diff = abs(true-pred)/true
     indices = rel_diff > loss_cutoff
@@ -170,7 +172,7 @@ def train_model(model, dataloader, curve_weight, epochs=100, lr=0.0001):
 # ---------------------------------
 # 🔹 Running the Training
 # ---------------------------------
-image_folder = "All_pre_thesis_png_expanded"#"CNN_training_png_expanded"
+image_folder = "All_pre_thesis_png_expanded" #"CNN_training_png_expanded"
 data_file = "processed_data_expanded.npz"
 
 stress_norm = 200 #MPa

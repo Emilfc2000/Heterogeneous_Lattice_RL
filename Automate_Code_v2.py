@@ -9,7 +9,7 @@ exePath = r"C:/Program Files/nTopology/nTopology/nTopCL.exe"  # nTopCL path
 nTopFilePath = "lattice_auto.ntop"  # Path to your nTop file
 json_folder = "json_files"  # Folder to store JSON files
 summary_file = "output_summary.txt"  # Summary file
-stl_output_folder = r"C:/Users/emilf/OneDrive - Aarhus universitet/Uni/10. Semester/Codes_and_files/stl_files/"
+stl_output_folder = "stl_files" # Folder for new stl files
 
 # Ensure json_files folder exists
 os.makedirs(json_folder, exist_ok=True)
