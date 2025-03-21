@@ -1,4 +1,4 @@
-# Heterogeneous_Lattice_RL
+## Heterogeneous Lattice RL
 Reinforcement Learning Framework for designed optimized heterogeneous lattice structure utilizing Voronoi seeding theory. Requires full access license for nTopology.
 
 --------------------
