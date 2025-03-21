@@ -13,9 +13,11 @@ To Run Reinforcement Learning, one must:
 
 4: Utilize flip_images_artificial_data to 4x amount of data, by mirroring all pngs in x y and z planes and copying the targets
 
-5: Run Hybrid_CNN_NN to train CNN
+5: Update all path and file locations in the scripts
 
-6: set total_timesteps in Reinforcement_Learning_code, and run it for the desired training duration
+6: Run Hybrid_CNN_NN to train CNN
+
+7: set total_timesteps in Reinforcement_Learning_code, and run it for the desired training duration
 
 --------------------
 
