@@ -1,7 +1,7 @@
 # Heterogeneous_Lattice_RL
 Reinforcement Learning Framework for designed optimized heterogeneous lattice structure utilizing Voronoi seeding theory
 
-
+--------------------
 
 To Run Reinforcement Learning, one must:
 
@@ -17,6 +17,7 @@ To Run Reinforcement Learning, one must:
 
 6: set total_timesteps in Reinforcement_Learning_code, and run it for the desired training duration
 
+--------------------
 
 To run on PRIME cluster
 
@@ -28,7 +29,7 @@ scp the prime_RL_heterogeneous folder to prime /com/meadd (This folder includes 
 
 Simply run the RL_prime_code
 
-
+--------------------
 
 Python files:
 
@@ -46,7 +47,7 @@ Hybrid_CNN_NN.py - Trains CNN and NN with PNG + specified material values as inp
 
 Reinforcement_Learning_code.py - The actual RL framework which utilizes the Hybrid CNN NN to train the RL Agent.
 
-
+--------------------
 
 Folders:
 
