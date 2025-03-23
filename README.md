@@ -29,6 +29,8 @@ Ensure all training data (pngs and npz data files with E_c and curves) are in co
 
 scp the prime_RL_heterogeneous folder to prime /com/meadd (This folder includes slightly varied versions of the necessary files for PRIME to run: RL code, CNN code, nTop file, training pngs and target curves and E_cs.)
 
+(Is done by writing on terminal on own PC: "scp my_pc_path/to_file.txt auXXXXXX@prime.eng.au.dk:path_to/location *prime_password*)
+
 Simply run the RL_prime_code
 
 --------------------
