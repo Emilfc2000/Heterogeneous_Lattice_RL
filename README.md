@@ -37,10 +37,15 @@ Simply run the RL_prime_code
 Accessing PRIME cluster
 
 Open Terminal
+
 "ssh auXXXXXX@ssh.au.dk"
+
 "*au-password*"
+
 Accept 2-Factor-Authentication
+
 "ssh auXXXXXX@prime.eng.au.dk"
+
 "*Prime-Password*"
 
 --------------------
