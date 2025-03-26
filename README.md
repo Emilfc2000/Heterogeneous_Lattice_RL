@@ -34,6 +34,16 @@ scp the prime_RL_heterogeneous folder to prime /com/meadd (This folder includes 
 Simply run the RL_prime_code
 
 --------------------
+Accessing PRIME cluster
+
+Open Terminal
+"ssh auXXXXXX@ssh.au.dk"
+"*au-password*"
+Accept 2-Factor-Authentication
+"ssh auXXXXXX@prime.eng.au.dk"
+"*Prime-Password*"
+
+--------------------
 
 ## Python files:
 
