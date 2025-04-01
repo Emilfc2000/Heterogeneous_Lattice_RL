@@ -4,14 +4,7 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import torchvision.transforms as transforms
-import trimesh
 from scipy.integrate import simpson
-from skimage.draw import polygon
-from PIL import Image
 from gymnasium import Env, spaces
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import VecMonitor, SubprocVecEnv, DummyVecEnv
@@ -19,8 +12,8 @@ from stable_baselines3.common.callbacks import BaseCallback
 
 
 #Define file locations and names
-# RL_folder = r"C:/Users/emilf/OneDrive - Aarhus universitet/Uni/10. Semester/Codes_and_files/RL_training_folder/" #Folder to keep all intermediate files for training (json, stl, png)
-RL_folder = r"RL_training_folder/"
+# RL_folder = r"C:/Users/emilf/OneDrive - Aarhus universitet/Uni/10. Semester/Codes_and_files/RL_training_folder/"
+RL_folder = r"RL_training_folder/" # Folder to keep all intermediate files for training (json, csv, stl, png)
 exePath = r"C:/Program Files/nTopology/nTopology/nTopCL.exe"  # nTopCL path
 nTopFilePath = "lattice_auto_w_simulations.ntop"  # Path to your nTop file
 
@@ -50,11 +43,11 @@ class LatticeEnv(Env):
         
         # Define Compressions and Loads for simulations:
         self.Compressions = (-np.array([0.03, 0.06, 0.09, 0.12, 0.15])).tolist()
-        self.Loads = (-np.array([500, 1000, 1500, 2000, 2500])).tolist()
+        self.Loads = (-np.array([50, 100, 150, 200, 250])).tolist()
 
         # Material properties: [Density [kg/m^3], Poisson's Ratio [], Youngs mod [MPa], UTS [MPa]]
-        self.blackV4 = [1200, 0.35, 2600, 65]
-        self.Elastic50a = [1200, 0.45, 1000, 8.9]
+        self.blackV4 = [1200, 0.35, 2800, 65] # https://formlabs.com/eu/store/materials/black-resin-v4/?srsltid=AfmBOooV6wkFh0Tjvj68ALg3bF4jgPiMXTK_qsLtSnzcyVVrIkFpAGt7
+        self.Elastic50a = [1200, 0.45, 10, 3.23] # https://formlabs-media.formlabs.com/datasheets/2001420-TDS-ENUS-0.pdf
 
         self.current_step = 0
         self.count = 0
@@ -213,17 +206,17 @@ class LatticeEnv(Env):
 
         # All components of reward calculations, with weigths - these weights should be tuned
         # Positive components (The higher the better)
-        Ec = E_c * 1/50 # Compressive E * weight
-        Ea = E_abs * 50 # Energy Absorbed * weight
+        Ec = E_c * 1/50 # Compressive E [MPa] * weight
+        Ea = E_abs * 50 # Energy Absorbed [J] * weight
         # Negative components (The lower the better)
-        sv = sv_algorithm(s_vars) * 1/20 # Variance of stress fields  * weight
-        sm = sum(s_maxs>self.blackV4[3]) * 10 # When max stress is above UTS * weight
-        bt = action[0] * 20 # Beam thickness * weight
-        cc = action[1] * 1/20 # Voronoi Cell Count * weight
-        rd = rel_density * 10 # Relative Density * weight
-        L = action[2] * 1/3 # Length of lattice * weight
-        W = action[3] * 1/3 # Width of lattice * weight
-        H = action[4] * 1/3 # Height of lattice * weight
+        sv = sv_algorithm(s_vars) * 1/20 # Variance of stress fields [MPa^2] * weight
+        sm = sum(s_maxs>self.Elastic50a[3]) * 10 # When max stress [MPa] is above UTS * weight
+        bt = action[0] * 20 # Beam thickness [mm] * weight
+        cc = action[1] * 1/20 # Voronoi Cell Count [] * weight
+        rd = rel_density * 10 # Relative Density [] * weight
+        L = action[2] * 1/3 # Length of lattice [mm] * weight
+        W = action[3] * 1/3 # Width of lattice [mm] * weight
+        H = action[4] * 1/3 # Height of lattice [mm] * weight
 
         reward = Ec + Ea - sv - sm - bt - cc - rd - L - W - H
 
