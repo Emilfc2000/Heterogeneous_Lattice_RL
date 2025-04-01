@@ -25,17 +25,19 @@ exePath = r"C:/Program Files/nTopology/nTopology/nTopCL.exe"  # nTopCL path
 nTopFilePath = "lattice_auto_w_simulations.ntop"  # Path to your nTop file
 
 #Geometry of desired design:
-Length, Width, Height = 20, 20, 20 #mm, mm, mm
-# When making json file, the width is set to 1mm, in order to optimize ntop meshing time.
+Length_min, Width_min, Height_min = 20, 20, 20 #mm, mm, mm
+# Different options for max dimension:
+# Length_max, Width_max, Height_max = Length_min, Width_min, Height_min #mm, mm, mm
+Length_max, Width_max, Height_max = 25, 25, 30 #mm, mm, mm
 
 class LatticeEnv(Env):
     def __init__(self):
         super(LatticeEnv, self).__init__()
         
         # Define specific low and high limits for each of the design parameters:
-        # Beam Thickness (mm), Cell Count, Length, Width, Height (These 3 params should have same value)
-        self.action_low_limits = np.array([0.4, 120, Length, Width, Height], dtype=np.float32)
-        self.action_high_limits = np.array([0.8, 230, Length, Width, Height], dtype=np.float32)
+        # Beam Thickness (mm), Cell Count, Length, Width, Height
+        self.action_low_limits = np.array([0.4, 120, Length_min, Width_min, Height_min], dtype=np.float32)
+        self.action_high_limits = np.array([0.8, 230, Length_max, Width_max, Height_max], dtype=np.float32)
 
         # Update action space with different bounds per parameter
         self.action_space = spaces.Box(low=self.action_low_limits, high=self.action_high_limits, dtype=np.float32)
@@ -62,7 +64,11 @@ class LatticeEnv(Env):
             np.random.seed(seed)
         
         self.current_step = 0
-        self.state = np.array([0.1, 0.1, 0.1, 0.1])  # Initialization of state
+
+        # Initializing with a random intial state.
+        # The state doesn't contribute to reward function, but it might influence first action
+        random_initial_state = np.random.rand(4)
+        self.state = random_initial_state*self.obs_high
         
         return self.state, {}
     
