@@ -35,7 +35,7 @@ To Run Reinforcement Learning via RL+ntop simulations framework, one must:
 
 --------------------
 
-To run on PRIME cluster
+To run on PRIME cluster - DOES NOT WORK CURRENTLY
 
 Go to prime_RL_heterogneous folder - ensure RL_prime_code has correct total_timesteps and other parameters.
 
