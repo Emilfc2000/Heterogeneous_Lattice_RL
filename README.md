@@ -5,7 +5,7 @@ This repository currently holds 2 different RL frameworks. One based fully on Py
 
 --------------------
 
-To Run Reinforcement Learning via CNN+data framework, one must:
+To Run Reinforcement Learning with CNN + data framework, one must:
 
 1: Generate training data by creating lattice structures and compression testing them (or simulations)
 
@@ -23,7 +23,7 @@ To Run Reinforcement Learning via CNN+data framework, one must:
 
 --------------------
 
-To Run Reinforcement Learning via RL+ntop simulations framework, one must:
+To Run Reinforcement Learning with ntop simulations framework, one must:
 
 1: Download lattice_auto_w_simulations.ntop AND Reinforcement_Learning_code_ntop_sim.py, and put them in the same folder
 
