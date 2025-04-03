@@ -51,7 +51,7 @@ class LatticeEnv(Env):
         
         # Define Compressions and Loads for simulations:
         self.Compressions = (-np.array([0.03, 0.06, 0.09, 0.12, 0.15])).tolist()
-        self.Loads = (-np.array([30, 60, 90, 120, 150])).tolist()
+        self.Loads = (-np.array([50, 100, 150])).tolist()
 
         # Material properties: [Density [kg/m^3], Poisson's Ratio [], Youngs mod [MPa], UTS [MPa]]
         self.blackV4 = [1200, 0.35, 2800, 65] # https://formlabs.com/eu/store/materials/black-resin-v4/?srsltid=AfmBOooV6wkFh0Tjvj68ALg3bF4jgPiMXTK_qsLtSnzcyVVrIkFpAGt7
@@ -208,7 +208,7 @@ class LatticeEnv(Env):
         L, W, H = action[2], action[3], action[4] #Length Width and Height of current lattice structure
 
         # Stress Fields - Import from nTop and utilize:
-        N_stress_sims = 5 # Number of Specified Compression simulations in nTop file
+        N_stress_sims = len(self.Compressions) # Number of Specified Compression simulations in nTop file
         stress_vars = np.zeros(N_stress_sims) # Initialize array for data
         stress_maxs = np.zeros(N_stress_sims) # Initialize array for data
         for i in range(1, 1+N_stress_sims):
@@ -223,7 +223,7 @@ class LatticeEnv(Env):
             stress_maxs[i-1] = max(data["Stress [Pa]"]/1e6) # unit: MPa
 
         # Displacement Fields - Import from nTop and utilize:
-        N_disp_sims = 5 # Number of Specified Load simulations in nTop file
+        N_disp_sims = len(self.Loads) # Number of Specified Load simulations in nTop file
         U_z = np.zeros(N_disp_sims) # Initialize array for data
         for i in range(1, 1+N_disp_sims):
             disp_file = RL_folder+f"displacement_{i}.csv"
