@@ -1,38 +1,60 @@
 # Heterogeneous Lattice RL
-Reinforcement Learning Framework for designed optimized heterogeneous lattice structure utilizing Voronoi seeding theory. Requires full access license for nTopology.
+Reinforcement Learning Framework for designing optimized heterogeneous lattice structure utilizing Voronoi seeding theory. Requires a full access license for nTopology (Educational licences gives this)
 
-This repository currently holds 2 different RL frameworks. One based fully on Python RL and ntop (lattice generation and simulation), and another which is based on PYthon RL and CNN, ntop (lattice generation), and is missing some data / simulation software (could be ANSYS), to generate data for the CNN. If the CNN is properly trained, this framework will run faster. However, the first (only python+ntop) also runs well, and works currently - though pending a tuning of reward-function.
+This repository holds an RL design framework for heterogeneous lattice structures. Several versions are included, which have different features and capabilities:
+
+Framework v1: Based on Reinforcement Learning and Convolutional Neural Network. The framework with the highest technical complexity and hardest to run. Requires large data to train a CNN to function as part of the RL environment. It should theoretically run fastest once running, but is currently only made to simply optimize compressive strength. Needs 1000's of data and tuning to work
+
+Framework v2: Based on Reinforcement Learning and nTop compression FEA simulations. This is the simplest framework, and only requires a python code and an ntop file to run. Evaluation of the generated lattices is performed within the nTop file, and the result is returned to the RL Agent for rapid reward calculation. Reward calculation requires tuning.
+
+Framework v3: Based on Reinforcement Learning, nTop compression FEA simulations, and controllable density field. This version is an upgrade to the v2 framework, and has the added functionality of defining a large number of control inputs to set the density field of the lattice structure, adding localized control parameters for the RL Agent to potentially control local behavior of the structure.
 
 --------------------
+**Framework Version 1: RL + CNN + data**
 
-To Run Reinforcement Learning with CNN + data framework, one must:
+To Run Reinforcement Learning framework v1 (with CNN + data) one must:
 
-1: Generate training data by creating lattice structures and compression testing them (or simulations)
+1: Generate training data by creating lattice structures and compressing them (or simulations)
 
-2: Utilize stl_to_png python file to generate png files for CNN to read
+2: Utilize the stl_to_png Python file to generate PNG files for CNN to read
 
-3: Utilize Extract_curves_and_E_c to extract the targets for the pngs, such that CNN can be trained
+3: Utilize Extract_curves_and_E_c to extract the targets for the PNGs, such that CNN can be trained
 
 4: Utilize flip_images_artificial_data to 4x amount of data, by mirroring all pngs in x y and z planes and copying the targets
 
 5: Update all path and file locations in the scripts
 
-6: Run Hybrid_CNN_NN to train CNN
+6: Run Hybrid_CNN_NN to train the CNN
 
-7: set total_timesteps in Reinforcement_Learning_code, and run it for the desired training duration
+7: Download lattice_auto_v1.ntop
+
+8: Set total_timesteps in Reinforcement_Learning_v1, and run it for the desired training duration
 
 --------------------
+**Framework Version 1: RL + nTop simulation**
 
-To Run Reinforcement Learning with ntop simulations framework, one must:
+To run Reinforcement Learning Framework v2: (with ntop simulations), one must:
 
-1: Download lattice_auto_w_simulations.ntop AND Reinforcement_Learning_code_ntop_sim.py, and put them in the same folder
+1: Download lattice_auto_v2.ntop AND Reinforcement_Learning_v2.py, and put them in the same folder
 
-2: Go into python file, specify location of ntopCL on PC (in the begging of the code)
+2: Go into the Python file, specify the location of ntopCL on PC (at the beginning of the code)
 
-3: Set total time_steps in the code (at the bottom) - this indicates the number of episodes the RL code will run. On brand new high end gaming laptop, one episode i roughly 500 seconds
+3: Set total time_steps in the code (at the bottom) - this indicates the number of episodes the RL code will run. On a brand new high-end gaming laptop, one episode is roughly 500 seconds
+
+4: Run the RL code, which will optimize the design parameters. To specify limits, one can also change the range of the design parameters at the beginning of the environment class.
+
+--------------------
+**Framework Version 3: RL + nTop simulation + controllable density field**
+
+To run Reinforcement Learning Framework v3: (with ntop simulations AND controllable lattice density field), one must:
+
+1: Download lattice_auto_v3.ntop AND Reinforcement_Learning_v3.py, and put them in the same folder
+
+2: Go into the Python file, specify the location of ntopCL on PC (at the beginning of the code)
+
+3: Set total time_steps in the code (at the bottom) - this indicates the number of episodes the RL code will run. On a brand new high-end gaming laptop, one episode is roughly 400 seconds
 
 4: Run the RL code, and it will optimize the design parameters. One can also change the range of the design parameters in the begging of the environment class, to specify limits.
-
 --------------------
 
 To run on PRIME cluster - DOES NOT WORK CURRENTLY
@@ -78,40 +100,46 @@ flip_images_artificial_data.py - generates artificial data to 4x the dataset for
 
 Hybrid_CNN_NN.py - Trains CNN and NN with PNG + specified material values as input, and data from npz as targets
 
-Reinforcement_Learning_code_cnn.py - The 2nd RL framework which utilizes the Hybrid CNN NN to train the RL Agent.
+Reinforcement_Learning_v1.py - The framework which utilizes the Hybrid CNN NN to train the RL Agent.
 
-Reinforcement_Leraning_code_ntop_sim.py - The 1st framework which utilizes ntop simulations to train the RL agent
+Reinforcement_Learning_v2.py - The framework which utilizes ntop simulations to train the RL Agent.
 
-Voronoi_Lattice_2D.py - A seperate unrelated script, which from input dimensions and parameters can generate a 2D voronoi lattice as a cad drawing file. This could potentially in the the future be upgraded to replace the nTop software for generating the lattices.
+Reinforcement_Learning_v3.py - The framework which utilizes ntop simulations to train the RL Agent, which also has control of the density field of lattice cell distribution.
+
+Voronoi_Lattice_2D.py - A separate, unrelated script, which, from input dimensions and parameters, can generate a 2D Voronoi lattice as a CAD drawing file. This could potentially be upgraded in the future to replace the nTop software for generating the lattices.
 
 --------------------
 
 Other Files:
 
-lattice_auto.ntop - nTop file setup to take in the json files generated by the RL agent and generate lattice structure
+lattice_auto_v1.ntop - nTop file setup to take in the JSON files generated by the RL agent and generate a lattice structure.
 
-lattice_auto.ntop - nTop file steup to take in the json files generated by the RL agent and generates lattice structure and performs a series of compression simulations
+lattice_auto_v2.ntop - nTop file setup to take in the JSON files generated by the RL agent and generates a lattice structure, and performs a series of compression simulations
+
+lattice_auto_v3.ntop - nTop file setup to take in the JSON files generated by the RL agent and generates a lattice structure with control of lattice density field, and performs a series of compression simulations.
 
 --------------------
 
-## Folders:
+## Folders referenced in codes:
 
-0_initial_docs_previous_version - Old python documents and files no longer used.
+0_initial_docs_previous_version - Old Python documents and files no longer used.
 
-All_pre_thesis_png - folder with pngs of all 29 pre-thesis specimens
+All_pre_thesis_png - folder with PNGs of all 29 pre-thesis specimens.
 
-All_pre_thesis_png_expanded - 29*4=116 pngs, including the original 29 pngs and the artificial generated data from flip_images_arti....py
+All_pre_thesis_png_expanded - 29*4=116 pngs, including the original 29 pngs and the artificially generated data from flip_images_arti....py.
 
-Batch_4_stl - stl files for all batch for lattice structures
+Batch_4_stl - STL files for all batches for lattice structures.
 
-CNN_training_png - folder with all pngs to be used for CNN training. 29 pre-thesis samples have been manually copied into this folder, and all future batches will also be put here
+CNN_training_png - folder with all PNGs to be used for CNN training. 29 pre-thesis samples have been manually copied into this folder, and all future batches will also be put here.
 
-CNN_training_png_expanded - the expanded version of the previous folder, with the artificial extra data
+CNN_training_png_expanded - the expanded version of the previous folder, with the artificial extra data.
 
-json_files - Folder to hold the automatically generated json files which are used to automate the nTop design through the automade code
+json_files - Folder to hold the automatically generated json files which are used to automate the nTop design through the automade code.
 
 png_images - currently holds a few lattices used to validate CNN results. 
 
-RL_folder - folder which contains all intermediate files for RL training (json, stl, png)
+RL_training_folder - folder which contains all intermediate files for RL training (CSV, JSON, STL, PNG).
+
+Pre_thesis_data.zip - zip folder containing all data gathered in pre-thesis, which has been used ofr preliminary testing, development, and validation of simulations
 
 prime_RL_heterogenous - folder to be copied into PRIME for training on cluster. Data for training should be placed in this folder under correct name and format.
