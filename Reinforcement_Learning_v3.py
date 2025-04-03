@@ -15,7 +15,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 # RL_folder = r"C:/Users/emilf/OneDrive - Aarhus universitet/Uni/10. Semester/Codes_and_files/RL_training_folder/"
 RL_folder = r"RL_training_folder/" # Folder to keep all intermediate files for training (json, csv, stl, png)
 exePath = r"C:/Program Files/nTopology/nTopology/nTopCL.exe"  # nTopCL path
-nTopFilePath = "lattice_auto_w_simulations.ntop"  # Path to your nTop file
+nTopFilePath = "lattice_auto_v3.ntop"  # Path to your nTop file
 
 #Geometry of desired design:
 Length_min, Width_min, Height_min = 20, 20, 20 #mm, mm, mm

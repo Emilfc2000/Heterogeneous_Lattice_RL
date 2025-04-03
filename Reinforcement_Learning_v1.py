@@ -26,7 +26,7 @@ for param in CNN_model.parameters():
 #Define file locations and names
 RL_folder = r"RL_training_folder/" #Folder to keep all intermediate files for training (json, stl, png)
 exePath = r"C:/Program Files/nTopology/nTopology/nTopCL.exe"  # nTopCL path
-nTopFilePath = "lattice_auto.ntop"  # Path to your nTop file
+nTopFilePath = "lattice_auto_v1.ntop"  # Path to your nTop file
 
 #Geometry of desired design:
 Length, Width, Height = 20, 20, 20 #mm, mm, mm
