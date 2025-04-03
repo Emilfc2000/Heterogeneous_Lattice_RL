@@ -20,8 +20,8 @@ nTopFilePath = "lattice_auto_v3.ntop"  # Path to your nTop file
 #Geometry of desired design:
 Length_min, Width_min, Height_min = 20, 20, 20 #mm, mm, mm
 # Different options for max dimension:
-# Length_max, Width_max, Height_max = Length_min, Width_min, Height_min #mm, mm, mm
-Length_max, Width_max, Height_max = 25, 25, 30 #mm, mm, mm
+Length_max, Width_max, Height_max = Length_min, Width_min, Height_min #mm, mm, mm
+# Length_max, Width_max, Height_max = 25, 25, 30 #mm, mm, mm
 
 class LatticeEnv(Env):
     def __init__(self):
@@ -29,8 +29,16 @@ class LatticeEnv(Env):
         
         # Define specific low and high limits for each of the design parameters:
         # Beam Thickness (mm), Cell Count, Length, Width, Height
-        self.action_low_limits = np.array([0.4, 120, Length_min, Width_min, Height_min], dtype=np.float32)
-        self.action_high_limits = np.array([0.8, 230, Length_max, Width_max, Height_max], dtype=np.float32)
+        a_low_params = np.array([0.4, 120, Length_min, Width_min, Height_min], dtype=np.float32)
+        a_high_params = np.array([0.8, 230, Length_max, Width_max, Height_max], dtype=np.float32)
+
+        # Adding the 100 control actions to control the density point map distrubution for the lattice in nTop
+        a_low_dens = np.ones(100)
+        a_high_dens = np.ones(100)*10
+
+        #Combining them for full action limits:
+        self.action_low_limits = np.concatenate((a_low_params, a_low_dens), dtype=np.float32)
+        self.action_high_limits = np.concatenate((a_high_params, a_high_dens), dtype=np.float32)
 
         # Update action space with different bounds per parameter
         self.action_space = spaces.Box(low=self.action_low_limits, high=self.action_high_limits, dtype=np.float32)
@@ -43,7 +51,7 @@ class LatticeEnv(Env):
         
         # Define Compressions and Loads for simulations:
         self.Compressions = (-np.array([0.03, 0.06, 0.09, 0.12, 0.15])).tolist()
-        self.Loads = (-np.array([50, 100, 150, 200, 250])).tolist()
+        self.Loads = (-np.array([30, 60, 90, 120, 150])).tolist()
 
         # Material properties: [Density [kg/m^3], Poisson's Ratio [], Youngs mod [MPa], UTS [MPa]]
         self.blackV4 = [1200, 0.35, 2800, 65] # https://formlabs.com/eu/store/materials/black-resin-v4/?srsltid=AfmBOooV6wkFh0Tjvj68ALg3bF4jgPiMXTK_qsLtSnzcyVVrIkFpAGt7
@@ -56,6 +64,7 @@ class LatticeEnv(Env):
         if seed is not None:
             np.random.seed(seed)
         
+        # Reseting step
         self.current_step = 0
 
         # Initializing with a random intial state.
@@ -67,8 +76,11 @@ class LatticeEnv(Env):
     
     def step(self, action):
         self.current_step += 1
+
+        # Generate density field point map as csv file for nTop to import in next part of step:
+        self.generate_density_field(action)
         
-        # Generate lattice stl structure using nTop command line and json input files
+        # Generate lattice structure using nTop command line and JSON input files
         rel_density = self.generate_lattice(action)
 
         # Importing ntop simulations data:
@@ -90,7 +102,47 @@ class LatticeEnv(Env):
         truncated = False
         
         return obs, reward, done, truncated, {}
-    
+
+    def generate_density_field(self, action):
+        # Will generate a field over the lattice.
+        # Utilizees lattice dimensions and center, as well as density values form action
+        L, W, H = action[2:5] # Dimensions of lattice
+        dens_vals = action[5:] # All 100 density values
+        c_x, c_y, c_z = 10, 0, 10 # mm center of lattice face - latticing face is on x-z plane, so y = 0
+
+        N = len(dens_vals)
+        N_x = 10
+        N_y = int(np.floor(N/N_x))
+        # To make robust (In case one inputs other than 100 inputs, this will cause it not to break)
+        # Will not enter this if statement if Agent gives 100 dens actions as intiall/currently defined.
+        if N%N_x != 0:
+            n_remove = N - N_x*N_y
+            dens_vals = dens_vals[:-n_remove] # Removes last n_remove number of action values.
+            N = len(dens_vals)
+
+        # Defining the grid based on dimensions
+        x_ = np.linspace(c_x-L/2, c_x+L/2, N_x).reshape(1,-1)
+        z_ = np.linspace(c_z-H/2, c_z+H/2, N_y).reshape(-1,1)
+        xz_mesh = np.meshgrid(x_,z_)
+
+        output = np.zeros((N + 1, 4)) # Output is x,y,z,dens (for each grid point)
+
+        # Field needs a point outside of x-z plane to interpolate properly in nTop.
+        # y=10 so far enough away to not actually effect lattice density field on the plane.
+        output[0,:] = [10,10,10,1] # Some random point far enough away to not effect, but to make it 3D
+        output[1:,0] = xz_mesh[0].reshape(-1,1).squeeze(1)
+        output[1:,1] = np.zeros(N) # Values are already 0 before, but for good measure
+        output[1:,2] = xz_mesh[1].reshape(-1,1).squeeze(1)
+        output[1:,3] = dens_vals
+
+        # Convert numpy array to pandas DataFrame
+        df = pd.DataFrame(output)
+
+        # Save DataFrame to .csv
+        df.to_csv(r'RL_training_folder/ramp_input.csv', index=False)
+
+        return
+
     def generate_lattice(self, action):
         # Generate Json file form action
         # run json through ntop
@@ -207,18 +259,21 @@ class LatticeEnv(Env):
         # All components of reward calculations, with weigths - these weights should be tuned
         # Positive components (The higher the better)
         Ec = E_c * 1/50 # Compressive E [MPa] * weight
-        Ea = E_abs * 50 # Energy Absorbed [J] * weight
+        Ea = E_abs * 30 # Energy Absorbed [J] * weight
         # Negative components (The lower the better)
         sv = sv_algorithm(s_vars) * 1/20 # Variance of stress fields [MPa^2] * weight
         sm = sum(s_maxs>self.Elastic50a[3]) * 10 # When max stress [MPa] is above UTS * weight
-        bt = action[0] * 20 # Beam thickness [mm] * weight
-        cc = action[1] * 1/20 # Voronoi Cell Count [] * weight
+        bt = action[0] * 15 # Beam thickness [mm] * weight
+        cc = action[1] * 1/25 # Voronoi Cell Count [] * weight
         rd = rel_density * 10 # Relative Density [] * weight
-        L = action[2] * 1/3 # Length of lattice [mm] * weight
-        W = action[3] * 1/3 # Width of lattice [mm] * weight
-        H = action[4] * 1/3 # Height of lattice [mm] * weight
+        Lw = action[2] * 1/3 # Length of lattice [mm] * weight
+        Ww = action[3] * 1/3 # Width of lattice [mm] * weight
+        Hw = action[4] * 1/3 # Height of lattice [mm] * weight
+        dm = np.mean(action[5:] - 5.5) * 20 # Mean Error on Density field * weight. Cannot do squared or absolute error
 
-        reward = Ec + Ea - sv - sm - bt - cc - rd - L - W - H
+        # Manualyl change and tailor this function to optimize for desired values
+        # reward = Ec + Ea - sv - sm - bt - cc - rd - Lw - Ww - Hw - dm
+        reward = Ea - rd - dm
 
         return float(reward)
 
@@ -255,7 +310,7 @@ env = VecMonitor(env)
 
 #Defining the PPO agent (A2C - Advantage Actor Critic agent with Proximal Policy Optimization of a Multi-Layer Perceptron NN Policy)
 RL_model = PPO("MlpPolicy", env, verbose=1, tensorboard_log="./ppo_lattice_tensorboard/", batch_size=2, n_steps=2, device="cpu")
-RL_model.learn(total_timesteps=4, callback=reward_logger) #total_timesteps is number of episodes
+RL_model.learn(total_timesteps=10, callback=reward_logger) #total_timesteps is number of episodes
 
 RL_model.save("ppo_lattice_model")
 
