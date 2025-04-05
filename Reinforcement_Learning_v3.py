@@ -14,7 +14,8 @@ from stable_baselines3.common.callbacks import BaseCallback
 
 #Define file locations and names
 # RL_folder = r"C:/Users/emilf/OneDrive - Aarhus universitet/Uni/10. Semester/Codes_and_files/RL_training_folder/"
-RL_folder = r"RL_training_folder/" # Folder to keep all intermediate files for training (json, csv, stl, png)
+RL_folder = "RL_training_folder\\" # Folder to keep all intermediate files for training (json, csv, stl, png)
+This_folder = os.getcwd()
 exePath = r"C:/Program Files/nTopology/nTopology/nTopCL.exe"  # nTopCL path
 nTopFilePath = "lattice_auto_v3.ntop"  # Path to your nTop file
 
@@ -26,7 +27,7 @@ Length_max, Width_max, Height_max = Length_min, Width_min, Height_min #mm, mm, m
 
 # Number of density control points: (Should be a square: 4, 9, 16, 25, .... 100)
 N_control = 25
-max_density = 6 # Maximum cell density (relative to the minimum; 1)
+max_density = 3 # Maximum cell density (relative to the minimum; 1)
 
 class LatticeEnv(Env):
     def __init__(self):
@@ -34,7 +35,8 @@ class LatticeEnv(Env):
         # Define specific low and high limits for each of the design parameters:
         # Beam Thickness (mm), Cell Count, Length, Width, Height
         self.a_low_params = np.array([0.4, 120, Length_min, Width_min, Height_min], dtype=np.float32)
-        self.a_high_params = np.array([0.7, 150, Length_max, Width_max, Height_max], dtype=np.float32)
+        # self.a_high_params = np.array([0.7, 150, Length_max, Width_max, Height_max], dtype=np.float32)
+        self.a_high_params = np.array([0.6, 140, Length_max, Width_max, Height_max], dtype=np.float32)
 
         # Adding the control actions to control the density point map distrubution for the lattice in nTop
         self.a_low_dens = np.ones(N_control)
@@ -112,7 +114,7 @@ class LatticeEnv(Env):
         # Delete the files, to ensure next epsiode utilizes new simulation data, and not accidentally the old
         filenames = ["stress_1.csv", "stress_2.csv","stress_3.csv", "stress_4.csv","stress_5.csv", "displacement_1.csv", "displacement_2.csv", "displacement_3.csv"]
         for name in filenames:
-            file_path = os.path.join(RL_folder, name)
+            file_path = RL_folder+name
             if os.path.exists(file_path):
                 os.remove(file_path)
 
@@ -165,7 +167,7 @@ class LatticeEnv(Env):
         df = pd.DataFrame(output)
 
         # Save DataFrame to .csv
-        df.to_csv(r'RL_training_folder/ramp_input.csv', index=False, header=False)
+        df.to_csv(os.path.join(RL_folder,"ramp_input.csv"), index=False, header=False)
 
         return
 
@@ -187,7 +189,7 @@ class LatticeEnv(Env):
             {"name": "Length", "type": "scalar", "values": float(action[2]), "units": "mm"},
             {"name": "Width", "type": "scalar", "values": float(action[3]), "units": "mm"},
             {"name": "Height", "type": "scalar", "values": float(action[4]), "units": "mm"},
-            {"name": "Save Folder Path", "type": "text", "value": RL_folder},
+            {"name": "Save Folder Path", "type": "text", "value": This_folder+"\\"+RL_folder},
             {"name": "Compression List", "type": "scalar_list", "value": self.Compressions},
             {"name": "Force List", "type": "scalar_list", "value": self.Loads, "units": "N"}            
             ]
@@ -385,7 +387,7 @@ RL_model = PPO("MlpPolicy", env, verbose=1,
                 tensorboard_log="./ppo_lattice_tensorboard/",
                 batch_size=2, n_steps=2,
                 device="cpu")
-RL_model.learn(total_timesteps=4, callback=reward_logger) #total_timesteps is number of episodes
+RL_model.learn(total_timesteps=2, callback=reward_logger) #total_timesteps is number of episodes
 t2 = time.time()
 print(f"Training time:\n{t2-t1:.5g} seconds or\n{(t2-t1)/60:.4g} minutes or\n{(t2-t1)/(60*60):.3g} hours")
 
