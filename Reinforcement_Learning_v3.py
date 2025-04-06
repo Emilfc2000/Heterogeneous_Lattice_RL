@@ -60,8 +60,9 @@ class LatticeEnv(Env):
         self.observation_space = spaces.Box(low=self.obs_low, high=self.obs_high, dtype=np.float32)
         
         # Define Compressions and Loads for simulations:
-        self.Compressions = (-np.array([0.03, 0.06, 0.09, 0.12, 0.15])).tolist()
-        self.Loads = (-np.array([50, 100, 150])).tolist()
+        self.Compressions = (-np.array([0.025, 0.050, 0.075, 0.10, 0.125])).tolist() # Compressive strain
+        # self.Loads = (-np.array([120, 240, 360])).tolist() # Newton - For blackV4 material
+        self.Loads = (-np.array([40, 80, 120])).tolist() # Newton - For Elastic50q material
 
         # Material properties: [Density [kg/m^3], Poisson's Ratio [], Youngs mod [MPa], UTS [MPa]]
         self.blackV4 = [1200, 0.35, 2800, 65] # https://formlabs.com/eu/store/materials/black-resin-v4/?srsltid=AfmBOooV6wkFh0Tjvj68ALg3bF4jgPiMXTK_qsLtSnzcyVVrIkFpAGt7
@@ -387,6 +388,10 @@ RL_model = PPO("MlpPolicy", env, verbose=1,
                 tensorboard_log="./ppo_lattice_tensorboard/",
                 batch_size=2, n_steps=2,
                 device="cpu")
+
+# If want to continue previous saved training - uncomment this next line
+RL_model = PPO.load("ppo_lattice_model", env=env, device="cpu")
+
 RL_model.learn(total_timesteps=2, callback=reward_logger) #total_timesteps is number of episodes
 t2 = time.time()
 print(f"Training time:\n{t2-t1:.5g} seconds or\n{(t2-t1)/60:.4g} minutes or\n{(t2-t1)/(60*60):.3g} hours")
