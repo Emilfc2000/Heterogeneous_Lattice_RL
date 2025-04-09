@@ -62,7 +62,7 @@ class LatticeEnv(Env):
         # Define Compressions and Loads for simulations:
         self.Compressions = (-np.array([0.025, 0.050, 0.075, 0.10, 0.125])).tolist() # Compressive strain
         # self.Loads = (-np.array([120, 240, 360])).tolist() # Newton - For blackV4 material
-        self.Loads = (-np.array([40, 80, 120])).tolist() # Newton - For Elastic50q material
+        self.Loads = (-np.array([15, 30, 45])).tolist() # Newton - For Elastic50q material
 
         # Material properties: [Density [kg/m^3], Poisson's Ratio [], Youngs mod [MPa], UTS [MPa]]
         self.blackV4 = [1200, 0.35, 2800, 65] # https://formlabs.com/eu/store/materials/black-resin-v4/?srsltid=AfmBOooV6wkFh0Tjvj68ALg3bF4jgPiMXTK_qsLtSnzcyVVrIkFpAGt7
@@ -78,8 +78,8 @@ class LatticeEnv(Env):
         # Reseting step
         self.current_step = 0
 
-        # Initializing with random
-        self.state = np.random.rand(4)
+        # Initializing with zeros, as state technically shouln't have any impact on actions ideally
+        self.state = np.zeros(4)
         
         return self.state, {}
     
@@ -97,20 +97,17 @@ class LatticeEnv(Env):
         # Generate lattice structure using nTop command line and JSON input files
         rel_density = self.generate_lattice(action)
 
-        # Importing ntop simulations data:
-        # (Variance of stress field, Maximums of stress fields,
-        # Absorbed energy, Compressibe Elastic Modulus)
-        s_vars, s_maxs, E_abs, E_c, npr = self.ntop_sims(action)
+        # In case Simulations fails, rel_density = 0, and ignore all code and 
+        if rel_density == 0:
+            reward = 0
+        else:
+            # Importing ntop simulations data:
+            # (Variance of stress field, Maximums of stress fields,
+            # Absorbed energy, Compressibe Elastic Modulus)
+            s_vars, s_maxs, E_abs, E_c, npr = self.ntop_sims(action)
 
-        # Defining observations to return back to agent
-        obs1 = max(s_vars)
-        obs2 = max(s_maxs)
-        obs3 = E_abs
-        obs4 = E_c
-        obs = np.array([obs1, obs2, obs3, obs4], dtype = np.float32)
-
-        # Reward function
-        reward = self.reward_calc(s_vars=s_vars, s_maxs=s_maxs, E_abs=E_abs, E_c=E_c, npr=npr, rel_density=rel_density, action=action)
+            # Reward function
+            reward = self.reward_calc(s_vars=s_vars, s_maxs=s_maxs, E_abs=E_abs, E_c=E_c, npr=npr, rel_density=rel_density, action=action)
         
         # Delete the files, to ensure next epsiode utilizes new simulation data, and not accidentally the old
         filenames = ["stress_1.csv", "stress_2.csv","stress_3.csv", "stress_4.csv","stress_5.csv", "displacement_1.csv", "displacement_2.csv", "displacement_3.csv"]
@@ -119,8 +116,11 @@ class LatticeEnv(Env):
             if os.path.exists(file_path):
                 os.remove(file_path)
 
+        # Defining observations to return back to agent
+        obs = np.zeros(4)
+
         done = True # Such that each training episode consists of only ONE action
-        truncated = False
+        truncated = False # Doesn't really matter because done always True
         
         return obs, reward, done, truncated, {}
 
@@ -217,6 +217,9 @@ class LatticeEnv(Env):
                 print("STDOUT:\n", result.stdout.strip())
                 print("STDERR:\n", result.stderr.strip())
 
+                # In case Simulation Fails
+                return 0
+            
                 # Raise FileNotFoundError to crash cleanly
                 raise FileNotFoundError(f"nTopCL failed: output file '{testfile}' was not generated.")
 
