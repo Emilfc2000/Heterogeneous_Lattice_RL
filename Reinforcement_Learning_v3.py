@@ -66,7 +66,7 @@ class LatticeEnv(Env):
 
         # Material properties: [Density [kg/m^3], Poisson's Ratio [], Youngs mod [MPa], UTS [MPa]]
         self.blackV4 = [1200, 0.35, 2800, 65] # https://formlabs.com/eu/store/materials/black-resin-v4/?srsltid=AfmBOooV6wkFh0Tjvj68ALg3bF4jgPiMXTK_qsLtSnzcyVVrIkFpAGt7
-        self.Elastic50a = [1200, 0.45, 10, 3.23] # https://formlabs-media.formlabs.com/datasheets/2001420-TDS-ENUS-0.pdf
+        self.Elastic50a = [1200, 0.45, 1, 3.23] # https://formlabs-media.formlabs.com/datasheets/2001420-TDS-ENUS-0.pdf
 
         self.current_step = 0
         self.count = 0
@@ -346,7 +346,7 @@ class LatticeEnv(Env):
         # Protection against infinite reward
         if not np.isfinite(reward):
             print("Bad reward:", reward)
-            reward = -1000.0
+            reward = -100.0
 
         return float(reward)
 
@@ -392,7 +392,7 @@ RL_model = PPO("MlpPolicy", env, verbose=1,
 # If want to continue previous saved training - uncomment this next line
 RL_model = PPO.load("ppo_lattice_model", env=env, device="cpu")
 
-RL_model.learn(total_timesteps=2, callback=reward_logger) #total_timesteps is number of episodes
+RL_model.learn(total_timesteps=4, callback=reward_logger) #total_timesteps is number of episodes
 t2 = time.time()
 print(f"Training time:\n{t2-t1:.5g} seconds or\n{(t2-t1)/60:.4g} minutes or\n{(t2-t1)/(60*60):.3g} hours")
 
@@ -424,9 +424,9 @@ x = np.linspace(0,1,5)
 y = np.linspace(0,1,5)
 X, Y = np.meshgrid(x,y)
 Z = action[5:].reshape(5,5)
-levels = np.linspace(1, max_density, 100)
-contour = plt.contourf(X, Y, Z, levels=levels, cmap='jet', vmin=1, vmax=max_density)
-plt.colorbar(contour, label="Relative Density")
+# levels = np.linspace(1, max_density, 100)
+contour = plt.contourf(X, Y, Z, cmap='jet')#, levels=levels)
+plt.colorbar(contour, label="Relative Seed Density")
 plt.title("Optimal Density Distribution")
 plt.axis("equal")
 plt.tight_layout()
