@@ -192,7 +192,8 @@ class LatticeEnv(Env):
             {"name": "Height", "type": "scalar", "values": float(action[4]), "units": "mm"},
             {"name": "Save Folder Path", "type": "text", "value": This_folder+"\\"+RL_folder},
             {"name": "Compression List", "type": "scalar_list", "value": self.Compressions},
-            {"name": "Force List", "type": "scalar_list", "value": self.Loads, "units": "N"}            
+            {"name": "Force List", "type": "scalar_list", "value": self.Loads, "units": "N"},
+            {"name": "Ramp File", "type": "text", "value": "ramp_input.csv"}          
             ]
         }
 
@@ -218,7 +219,8 @@ class LatticeEnv(Env):
                 print("STDERR:\n", result.stderr.strip())
 
                 # In case Simulation Fails
-                return 0
+                reward = reward_calc_failed()
+                return reward
             
                 # Raise FileNotFoundError to crash cleanly
                 raise FileNotFoundError(f"nTopCL failed: output file '{testfile}' was not generated.")
@@ -295,20 +297,20 @@ class LatticeEnv(Env):
             data.columns = ["X [mm]", "Y [mm]", "Z [mm]", "U_x [m]", "U_y [m]", "U_z [m]"]
 
             # Get displacement values for each compression step
-            U_z[i-1] = self.get_U_z(data, L, W, H)
+            U_z[i-1] = self.get_U_z(data, L, W, H) # unit: m
 
             # Get negative poisson ratio constraint for last 
-            npr[i-1] = self.get_npr(data, L, W, H)
+            npr[i-1] = self.get_npr(data, L, W, H) # unit: m
         
         # Make arrays to integrate Force-displacement courve
         y = np.concatenate((np.array([0]), -np.asarray(self.Loads)))
         x = np.concatenate((np.array([0]), -U_z),axis=0)
-        Energy_absorbed = simpson(y=y, x=x) #(y,x) input for some reasnm, unit: N*m=J
+        Energy_absorbed = simpson(y=y, x=x) #(y,x) input for some reason, unit: N*m=J
 
-        strain = x*1e3/H # unitless (Compression strain is usually designated as negative [-])
+        strain = x*1e3/H # unit: mm/mm = unitless (Compression strain is usually designated as negative [-])
         stress = y/(L*W) # unit: N/mm^2 = MPa
         gradiants = (stress[1:]-stress[:-1])/(strain[1:]-strain[:-1])
-        E_c= np.mean(gradiants) #Estimated Compressive Elasticity modulus, unit: MPa
+        E_c = np.mean(gradiants) # Estimated Compressive Elasticity modulus, unit: MPa
 
         return stress_vars, stress_maxs, Energy_absorbed, E_c, npr
 
@@ -340,19 +342,17 @@ class LatticeEnv(Env):
         bt = action[0] * 15 # Beam thickness [mm] * weight
         cc = action[1] * 1/30 # Voronoi Cell Count [] * weight
         rd = rel_density * 5 # Relative Density [] * weight
-        dm = abs(np.mean(action[5:] - 5.5)) * 10 # Error of mean on Density field * weight. Cannot do squared or absolute error
 
-        # Manualyl change and tailor this function to optimize for desired values
+        # Manually change and tailor this function to optimize for desired values
         # reward = Ec + Ea + np - Lw - Ww - Hw - sv - sm - bt - cc - rd - dm
-        reward = npr
+        reward = npr*1e3 # To get nice order of magnitude - as such reward has unit [mm], as npr output 
 
         # Protection against infinite reward
         if not np.isfinite(reward):
             print("Bad reward:", reward)
-            reward = -100.0
+            reward = reward_calc_failed()
 
         return float(reward)
-
 
 # Callback to track rewards during training. DON'T CHANGE - necessary for RL wo tork properly
 class RewardLoggerCallback(BaseCallback):
@@ -380,6 +380,13 @@ class RewardLoggerCallback(BaseCallback):
     
 reward_logger = RewardLoggerCallback(verbose=1)
 
+def reward_calc_failed():
+    # Small function to give mean or -1 reward in case simulations failed due to meshing or infinite reward gradient.
+    if len(reward_logger.episode_rewards) != 0:
+        reward = np.mean(reward_logger.episode_rewards)
+    else:
+        reward = -5 # Chosen because roughly equal to worst possible reward froms succesfull simulation
+    return reward
 
 #%% Train the RL model
 env = DummyVecEnv([lambda: LatticeEnv()])
@@ -392,14 +399,14 @@ RL_model = PPO("MlpPolicy", env, verbose=1,
                 batch_size=2, n_steps=2,
                 device="cpu")
 
-# If want to continue previous saved training - uncomment this next line
-RL_model = PPO.load("ppo_lattice_model", env=env, device="cpu")
+# If want to continue previous saved training - uncomment this next line. Have it commented if want to train new model
+RL_model = PPO.load("npr_ppo_lattice_model", env=env, device="cpu")
 
-RL_model.learn(total_timesteps=4, callback=reward_logger) #total_timesteps is number of episodes
+RL_model.learn(total_timesteps=2, callback=reward_logger) #total_timesteps is number of episodes
 t2 = time.time()
 print(f"Training time:\n{t2-t1:.5g} seconds or\n{(t2-t1)/60:.4g} minutes or\n{(t2-t1)/(60*60):.3g} hours")
 
-RL_model.save("ppo_lattice_model")
+RL_model.save("npr_ppo_lattice_model")
 
 # Plot reward progression
 plt.plot(reward_logger.episode_rewards, label="Reward per Episode")
@@ -416,6 +423,9 @@ plt.show()
 env = LatticeEnv()
 state, _ = env.reset()
 
+# Load the saved model - used when want to predict using previously trained model
+RL_model = PPO.load("npr_ppo_lattice_model", env=env, device="cpu")
+
 # Predict using RL_model
 action, _states = RL_model.predict(state, deterministic=True)
 action = env.denormalize_action(action)
@@ -423,12 +433,14 @@ print(f"Optimal action for a {action[2]}mm x {action[3]}mm x {action[4]}mm (Leng
 print(f"Beam Thickness:                     {action[0]:.4g}")
 print(f"Cell count:                         {action[1]:.0f}")
 
+# Save the Optimal density field as "ramp_input.csv" in the RL_training folder.
+LatticeEnv.generate_density_field(LatticeEnv, action)
+
 x = np.linspace(0,1,5)
 y = np.linspace(0,1,5)
 X, Y = np.meshgrid(x,y)
 Z = action[5:].reshape(5,5)
-# levels = np.linspace(1, max_density, 100)
-contour = plt.contourf(X, Y, Z, cmap='jet')#, levels=levels)
+contour = plt.contourf(X, Y, Z, cmap='jet', levels=100)
 plt.colorbar(contour, label="Relative Seed Density")
 plt.title("Optimal Density Distribution")
 plt.axis("equal")
