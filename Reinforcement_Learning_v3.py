@@ -391,63 +391,73 @@ def reward_calc_failed():
     return reward
 
 #%% Train the RL model
-env = DummyVecEnv([lambda: LatticeEnv()])
-env = VecMonitor(env)
 
-t1 = time.time()
-#Defining the PPO agent (A2C - Advantage Actor Critic agent with Proximal Policy Optimization of a Multi-Layer Perceptron NN Policy)
-RL_model = PPO("MlpPolicy", env, verbose=1,
-                tensorboard_log="./ppo_lattice_tensorboard/",
-                batch_size=2, n_steps=2,
-                device="cpu")
+# Plot optimal actions function:
+def opt_design(savedmodel):
+    # Re-initialize environment
+    env = LatticeEnv()
+    state, _ = env.reset()
 
-# If want to continue previous saved training - uncomment this next line. Have it commented if want to train new model
-RL_model = PPO.load("npr_ppo_lattice_model", env=env, device="cpu")
+    # Load the saved model - used when want to predict using previously trained model
+    RL_model = PPO.load(savedmodel, env=env, device="cpu")
 
-RL_model.learn(total_timesteps=8, callback=reward_logger) #total_timesteps is number of episodes
-t2 = time.time()
-print(f"Training time:\n{t2-t1:.5g} seconds or\n{(t2-t1)/60:.4g} minutes or\n{(t2-t1)/(60*60):.3g} hours")
+    # Predict using RL_model
+    action, _states = RL_model.predict(state, deterministic=True)
+    action = env.denormalize_action(action)
+    print(f"Optimal action for a {action[2]}mm x {action[3]}mm x {action[4]}mm (Length x Width x Height) design space is as such:")
+    print(f"Beam Thickness:                     {action[0]:.4g}")
+    print(f"Cell count:                         {action[1]:.0f}")
 
-RL_model.save("npr_ppo_lattice_model")
+    # Save the Optimal density field as "ramp_input.csv" in the RL_training folder.
+    LatticeEnv.generate_density_field(LatticeEnv, action)
 
-# Plot reward progression
-plt.plot(reward_logger.episode_rewards, label="Reward per Episode")
-plt.xlabel("Episode")
-plt.ylabel("Reward")
-plt.title("Reward Progression During Training")
-plt.legend()
-plt.show()
+    x = np.linspace(0,1,5)
+    y = np.linspace(0,1,5)
+    X, Y = np.meshgrid(x,y)
+    Z = action[5:].reshape(5,5)
+    contour = plt.contourf(X, Y, Z, cmap='jet', levels=100)
+    plt.colorbar(contour, label="Relative Seed Density")
+    plt.title("Optimal Density Distribution")
+    plt.axis("equal")
+    plt.tight_layout()
+    plt.show()
 
 
-#%% Use RL model to predict optimal BT and CC:
 
-# Re-initialize environment
-env = LatticeEnv()
-state, _ = env.reset()
+# If one wants to get optimal actions out every X episode
+episodes_per_figure = 2 # How many episodes per loop - Needs to be even number
+number_loops = 1 # How many loops
+filename = "npr_ppo_lattice_model"
+for i in range(number_loops):
+    env = DummyVecEnv([lambda: LatticeEnv()])
+    env = VecMonitor(env)
 
-# Load the saved model - used when want to predict using previously trained model
-RL_model = PPO.load("npr_ppo_lattice_model", env=env, device="cpu")
+    t1 = time.time()
+    #Defining the PPO agent (A2C - Advantage Actor Critic agent with Proximal Policy Optimization of a Multi-Layer Perceptron NN Policy)
+    RL_model = PPO("MlpPolicy", env, verbose=1,
+                    tensorboard_log="./ppo_lattice_tensorboard/",
+                    batch_size=2, n_steps=2,
+                    device="cpu")
 
-# Predict using RL_model
-action, _states = RL_model.predict(state, deterministic=True)
-action = env.denormalize_action(action)
-print(f"Optimal action for a {action[2]}mm x {action[3]}mm x {action[4]}mm (Length x Width x Height) design space is as such:")
-print(f"Beam Thickness:                     {action[0]:.4g}")
-print(f"Cell count:                         {action[1]:.0f}")
+    # If want to continue previous saved training - uncomment this next line. Have it commented if want to train new model
+    if os.path.exists(filename):
+        RL_model = PPO.load(filename, env=env, device="cpu")
 
-# Save the Optimal density field as "ramp_input.csv" in the RL_training folder.
-LatticeEnv.generate_density_field(LatticeEnv, action)
+    RL_model.learn(total_timesteps=episodes_per_figure, callback=reward_logger) #total_timesteps is number of episodes
+    t2 = time.time()
+    print(f"Training time:\n{t2-t1:.5g} seconds or\n{(t2-t1)/60:.4g} minutes or\n{(t2-t1)/(60*60):.3g} hours")
 
-x = np.linspace(0,1,5)
-y = np.linspace(0,1,5)
-X, Y = np.meshgrid(x,y)
-Z = action[5:].reshape(5,5)
-contour = plt.contourf(X, Y, Z, cmap='jet', levels=100)
-plt.colorbar(contour, label="Relative Seed Density")
-plt.title("Optimal Density Distribution")
-plt.axis("equal")
-plt.tight_layout()
-plt.show()
+    # RL_model.save(filename)
+
+    # Plot reward progression
+    plt.plot(reward_logger.episode_rewards, label="Reward per Episode")
+    plt.xlabel("Episode")
+    plt.ylabel("Reward")
+    plt.title("Reward Progression During Training")
+    plt.legend()
+    plt.show()
+
+    opt_design(filename)
 
 
 # One can now run these through ntop to generate the optimal lattice structure
