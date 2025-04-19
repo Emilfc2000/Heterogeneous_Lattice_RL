@@ -34,9 +34,9 @@ class LatticeEnv(Env):
         super(LatticeEnv, self).__init__()
         # Define specific low and high limits for each of the design parameters:
         # Beam Thickness (mm), Cell Count, Length, Width, Height
-        self.a_low_params = np.array([0.4, 120, Length_min, Width_min, Height_min], dtype=np.float32)
+        self.a_low_params = np.array([0.5, 120, Length_min, Width_min, Height_min], dtype=np.float32)
         # self.a_high_params = np.array([0.7, 150, Length_max, Width_max, Height_max], dtype=np.float32)
-        self.a_high_params = np.array([0.6, 140, Length_max, Width_max, Height_max], dtype=np.float32)
+        self.a_high_params = np.array([0.7, 140, Length_max, Width_max, Height_max], dtype=np.float32)
 
         # Adding the control actions to control the density point map distrubution for the lattice in nTop
         self.a_low_dens = np.ones(N_control)
@@ -387,6 +387,7 @@ def reward_calc_failed():
         reward = np.mean(reward_logger.episode_rewards)
     else:
         reward = -5 # Chosen because roughly equal to worst possible reward froms succesfull simulation
+    reward = -5
     return reward
 
 #%% Train the RL model
