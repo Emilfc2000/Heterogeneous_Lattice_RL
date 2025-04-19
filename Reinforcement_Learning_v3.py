@@ -425,7 +425,7 @@ def opt_design(savedmodel):
 
 
 # If one wants to get optimal actions out every X episode
-episodes_per_figure = 2 # How many episodes per loop - Needs to be even number
+episodes_per_figure = 2 # How many episodes per loop - Needs to be even number. 10 episodes  = 1 hour
 number_loops = 1 # How many loops
 filename = "npr_ppo_lattice_model"
 for i in range(number_loops):
