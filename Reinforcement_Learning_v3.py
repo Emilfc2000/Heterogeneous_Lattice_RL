@@ -20,7 +20,7 @@ exePath = r"C:/Program Files/nTopology/nTopology/nTopCL.exe"  # nTopCL path
 nTopFilePath = "lattice_auto_v3.ntop"  # Path to your nTop file
 
 #Geometry of desired design:
-Length_min, Width_min, Height_min = 20, 20, 20 #mm, mm, mm
+Length_min, Width_min, Height_min = 20, 5, 20 #mm, mm, mm
 # Different options for max dimension:
 Length_max, Width_max, Height_max = Length_min, Width_min, Height_min #mm, mm, mm
 # Length_max, Width_max, Height_max = 25, 25, 30 #mm, mm, mm
@@ -62,7 +62,7 @@ class LatticeEnv(Env):
         # Define Compressions and Loads for simulations:
         self.Compressions = (-np.array([0.025, 0.050, 0.075, 0.10, 0.125])).tolist() # Compressive strain
         # self.Loads = (-np.array([120, 240, 360])).tolist() # Newton - For blackV4 material
-        self.Loads = (-np.array([15, 30, 45])).tolist() # Newton - For Elastic50q material
+        self.Loads = (-np.array([4, 8, 12])).tolist() # Newton - For Elastic50q material
 
         # Material properties: [Density [kg/m^3], Poisson's Ratio [], Youngs mod [MPa], UTS [MPa]]
         self.blackV4 = [1200, 0.35, 2800, 65] # https://formlabs.com/eu/store/materials/black-resin-v4/?srsltid=AfmBOooV6wkFh0Tjvj68ALg3bF4jgPiMXTK_qsLtSnzcyVVrIkFpAGt7
@@ -99,7 +99,7 @@ class LatticeEnv(Env):
 
         # In case Simulations fails, rel_density = 0, and ignore all code and 
         if rel_density == 0:
-            reward = 0
+            reward = reward_calc_failed()
         else:
             # Importing ntop simulations data:
             # (Variance of stress field, Maximums of stress fields,
@@ -109,6 +109,7 @@ class LatticeEnv(Env):
             # Reward function
             reward = self.reward_calc(s_vars=s_vars, s_maxs=s_maxs, E_abs=E_abs, E_c=E_c, npr=npr, rel_density=rel_density, action=action)
         
+        print('Reward:', reward)
         # Delete the files, to ensure next epsiode utilizes new simulation data, and not accidentally the old
         filenames = ["stress_1.csv", "stress_2.csv","stress_3.csv", "stress_4.csv","stress_5.csv", "displacement_1.csv", "displacement_2.csv", "displacement_3.csv"]
         for name in filenames:
@@ -219,10 +220,10 @@ class LatticeEnv(Env):
                 print("STDERR:\n", result.stderr.strip())
 
                 # In case Simulation Fails
-                reward = reward_calc_failed()
-                return reward
+                rel_density = 0
+                return rel_density
             
-                # Raise FileNotFoundError to crash cleanly
+                # Raise FileNotFoundError to crash cleanly - this doesn't currently run, as function ends at return
                 raise FileNotFoundError(f"nTopCL failed: output file '{testfile}' was not generated.")
 
 
@@ -402,7 +403,7 @@ RL_model = PPO("MlpPolicy", env, verbose=1,
 # If want to continue previous saved training - uncomment this next line. Have it commented if want to train new model
 RL_model = PPO.load("npr_ppo_lattice_model", env=env, device="cpu")
 
-RL_model.learn(total_timesteps=2, callback=reward_logger) #total_timesteps is number of episodes
+RL_model.learn(total_timesteps=8, callback=reward_logger) #total_timesteps is number of episodes
 t2 = time.time()
 print(f"Training time:\n{t2-t1:.5g} seconds or\n{(t2-t1)/60:.4g} minutes or\n{(t2-t1)/(60*60):.3g} hours")
 
