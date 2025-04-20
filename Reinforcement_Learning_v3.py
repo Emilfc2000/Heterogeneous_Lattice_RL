@@ -70,7 +70,7 @@ class LatticeEnv(Env):
 
         self.current_step = 0
         self.count = 0
-        
+
     def reset(self, seed=None, options=None):
         if seed is not None:
             np.random.seed(seed)
@@ -122,7 +122,7 @@ class LatticeEnv(Env):
 
         done = True # Such that each training episode consists of only ONE action
         truncated = False # Doesn't really matter because done always True
-        
+
         return obs, reward, done, truncated, {}
 
     def denormalize_action(self, action):
@@ -425,9 +425,10 @@ def opt_design(savedmodel):
 
 
 # If one wants to get optimal actions out every X episode
-episodes_per_figure = 2 # How many episodes per loop - Needs to be even number. 10 episodes  = 1 hour
-number_loops = 1 # How many loops
+episodes_per_figure = 30 # How many episodes per loop - Needs to be even number. 10 episodes  = 1 hour
+number_loops = 2 # How many loops
 filename = "npr_ppo_lattice_model"
+reward_tracer = []
 for i in range(number_loops):
     env = DummyVecEnv([lambda: LatticeEnv()])
     env = VecMonitor(env)
@@ -447,7 +448,7 @@ for i in range(number_loops):
     t2 = time.time()
     print(f"Training time:\n{t2-t1:.5g} seconds or\n{(t2-t1)/60:.4g} minutes or\n{(t2-t1)/(60*60):.3g} hours")
 
-    # RL_model.save(filename)
+    RL_model.save(filename)
 
     # Plot reward progression
     plt.plot(reward_logger.episode_rewards, label="Reward per Episode")
@@ -456,6 +457,8 @@ for i in range(number_loops):
     plt.title("Reward Progression During Training")
     plt.legend()
     plt.show()
+
+    reward_tracer[i] = reward_logger.episode_rewards # To save all rewards across multiple l
 
     opt_design(filename)
 
