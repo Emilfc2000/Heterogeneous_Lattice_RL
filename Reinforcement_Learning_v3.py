@@ -3,6 +3,7 @@ import subprocess
 import json
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import colors
 import pandas as pd
 import time
 from scipy.integrate import simpson
@@ -27,7 +28,7 @@ Length_max, Width_max, Height_max = Length_min, Width_min, Height_min #mm, mm, m
 
 # Number of density control points: (Should be a square: 4, 9, 16, 25, .... 100)
 N_control = 25
-max_density = 3 # Maximum cell density (relative to the minimum; 1)
+max_distance = 3 # Maximum avereage relative distance between cell seeds (relative to the minimum; 1)
 
 class LatticeEnv(Env):
     def __init__(self):
@@ -40,7 +41,7 @@ class LatticeEnv(Env):
 
         # Adding the control actions to control the density point map distrubution for the lattice in nTop
         self.a_low_dens = np.ones(N_control)
-        self.a_high_dens = np.ones(N_control)*max_density
+        self.a_high_dens = np.ones(N_control)*max_distance
 
         #Combining them for full action limits:
         self.action_low_limits = np.concatenate((self.a_low_params, self.a_low_dens), dtype=np.float32)
@@ -249,6 +250,7 @@ class LatticeEnv(Env):
         return U_z
     
     def get_npr(self, data, L, W, H):
+        # Function to obtain the constraint for npr - negative poisson ratio - optimization
         # Define region boundaries of intersting structure
         z_lower = -H / 4
         z_upper = H / 4
@@ -402,7 +404,7 @@ def reward_calc_failed():
 #%% Train the RL model
 
 # Plot optimal actions function:
-def opt_design(savedmodel):
+def opt_design(savedmodel, i, episodes_per_figure):
     # Re-initialize environment
     env = LatticeEnv()
     state, _ = env.reset()
@@ -425,8 +427,8 @@ def opt_design(savedmodel):
     X, Y = np.meshgrid(x,y)
     Z = action[5:].reshape(5,5)
     contour = plt.contourf(X, Y, Z, cmap='jet', levels=100)
-    plt.colorbar(contour, label="Relative Seed Density")
-    plt.title("Optimal Density Distribution")
+    plt.colorbar(contour, label="Relative Average Distance Between Seeds")
+    plt.title(f'Episode {(i+1)*episodes_per_figure}')
     plt.axis("equal")
     plt.tight_layout()
     plt.show()
@@ -467,7 +469,7 @@ for i in range(number_loops):
     plt.legend()
     plt.show()
 
-    opt_design(filename)
+    opt_design(filename, i, episodes_per_figure)
 
 # Save reward file manually if desired
 np.savetxt("npr_500.csv", reward_logger.episode_rewards, delimiter=",")
