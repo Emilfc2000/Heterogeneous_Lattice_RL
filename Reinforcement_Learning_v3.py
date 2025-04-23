@@ -117,7 +117,7 @@ class LatticeEnv(Env):
             if os.path.exists(file_path):
                 os.remove(file_path)
 
-        # Defining observations to return back to agent
+        # Defining observations to return back to agent - constant 0 to stabilize training i think
         obs = np.zeros(4)
 
         done = True # Such that each training episode consists of only ONE action
@@ -249,25 +249,34 @@ class LatticeEnv(Env):
         return U_z
     
     def get_npr(self, data, L, W, H):
-        # Compute distances to centers rightmost and leftmost points (y-coordinate doesn't matter)
-        # Will be at (L/2, :, 0) and (-L/2, :, 0)
-        data["distance_cr"] = np.sqrt((data["X [mm]"] - L/2)**2 + 
-                                      (data["Z [mm]"] - 0)**2)
-        
-        data["distance_cl"] = np.sqrt((data["X [mm]"] + L/2)**2 +
-                                      (data["Z [mm]"] - 0)**2)
+        # Define region boundaries of intersting structure
+        z_lower = -H / 4
+        z_upper = H / 4
+        x_right_min = L / 2 - 2
+        x_left_max = - (L / 2 - 2)
 
-        # Select all points within 1mm of left and right face centers
-        closest_rows_right = data[data["distance_cr"] <= 1.0]
-        closest_rows_left = data[data["distance_cl"] <= 1.0]
+        # Select points within the right region
+        closest_rows_right = data[
+            (data["X [mm]"] >= x_right_min) &
+            (data["Z [mm]"] >= z_lower) &
+            (data["Z [mm]"] <= z_upper)
+        ]
+
+        # Select points within the left region
+        closest_rows_left = data[
+            (data["X [mm]"] <= x_left_max) &
+            (data["Z [mm]"] >= z_lower) &
+            (data["Z [mm]"] <= z_upper)
+        ]
 
         # Compute mean U_x values
         mean_U_x_right = closest_rows_right["U_x [m]"].mean()
         mean_U_x_left = closest_rows_left["U_x [m]"].mean()
-        # Want "inward" movement to be good, so in X direction from left, and in -X direction from right:
+
+        # Want "inward" movement to be good
         mean_U_x = np.mean([mean_U_x_left, -mean_U_x_right])
 
-        return mean_U_x
+        return mean_U_x * 1e3 # To get mm unit
 
     def ntop_sims(self, action):
         # Function to import and analyze the FEA simulation data from nTop.
@@ -346,7 +355,7 @@ class LatticeEnv(Env):
 
         # Manually change and tailor this function to optimize for desired values
         # reward = Ec + Ea + np - Lw - Ww - Hw - sv - sm - bt - cc - rd - dm
-        reward = npr*1e3 # To get nice order of magnitude - as such reward has unit [mm], as npr output 
+        reward = npr # unit [mm]
 
         # Protection against infinite reward
         if not np.isfinite(reward):
@@ -425,10 +434,10 @@ def opt_design(savedmodel):
 
 
 # If one wants to get optimal actions out every X episode
-episodes_per_figure = 30 # How many episodes per loop - Needs to be even number. 10 episodes  = 1 hour
-number_loops = 2 # How many loops
+episodes_per_figure = 2 # How many episodes per loop - Needs to be even number. 10 episodes  = 1 hour
+number_loops = 1 # How many loops
 filename = "npr_ppo_lattice_model"
-reward_tracer = []
+reward_tracer = np.zeros(episodes_per_figure*number_loops)
 for i in range(number_loops):
     env = DummyVecEnv([lambda: LatticeEnv()])
     env = VecMonitor(env)
@@ -440,7 +449,7 @@ for i in range(number_loops):
                     batch_size=2, n_steps=2,
                     device="cpu")
 
-    # If want to continue previous saved training - uncomment this next line. Have it commented if want to train new model
+    # If one wants to continue previous saved training.
     if os.path.exists(filename):
         RL_model = PPO.load(filename, env=env, device="cpu")
 
@@ -458,9 +467,9 @@ for i in range(number_loops):
     plt.legend()
     plt.show()
 
-    reward_tracer[i] = reward_logger.episode_rewards # To save all rewards across multiple l
-
     opt_design(filename)
 
+# Save reward file manually if desired
+np.savetxt("npr_500.csv", reward_logger.episode_rewards, delimiter=",")
 
 # One can now run these through ntop to generate the optimal lattice structure
