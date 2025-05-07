@@ -63,7 +63,7 @@ class LatticeEnv(Env):
         # Define Compressions and Loads for simulations:
         self.Compressions = (-np.array([0.025, 0.050, 0.075, 0.10, 0.125])).tolist() # Compressive strain
         # self.Loads = (-np.array([120, 240, 360])).tolist() # Newton - For blackV4 material
-        self.Loads = (-np.array([4, 8, 12])).tolist() # Newton - For Elastic50q material
+        self.Loads = (-np.array([4, 8, 12])).tolist() # Newton - For Elastic50a material
 
         # Material properties: [Density [kg/m^3], Poisson's Ratio [], Youngs mod [MPa], UTS [MPa]]
         self.blackV4 = [1200, 0.35, 2800, 65] # https://formlabs.com/eu/store/materials/black-resin-v4/?srsltid=AfmBOooV6wkFh0Tjvj68ALg3bF4jgPiMXTK_qsLtSnzcyVVrIkFpAGt7
@@ -105,10 +105,10 @@ class LatticeEnv(Env):
             # Importing ntop simulations data:
             # (Variance of stress field, Maximums of stress fields,
             # Absorbed energy, Compressibe Elastic Modulus)
-            s_vars, s_maxs, E_abs, E_c, npr = self.ntop_sims(action)
+            s_vars, s_maxs, E_abs, E_c, npr, dir_deform = self.ntop_sims(action)
 
             # Reward function
-            reward = self.reward_calc(s_vars=s_vars, s_maxs=s_maxs, E_abs=E_abs, E_c=E_c, npr=npr, rel_density=rel_density, action=action)
+            reward = self.reward_calc(s_vars=s_vars, s_maxs=s_maxs, E_abs=E_abs, E_c=E_c, npr=npr, dir_deform=dir_deform, rel_density=rel_density, action=action)
         
         print('Reward:', reward)
         # Delete the files, to ensure next epsiode utilizes new simulation data, and not accidentally the old
@@ -280,6 +280,20 @@ class LatticeEnv(Env):
 
         return mean_U_x * 1e3 # To get mm unit
 
+    def direction_deformation(self, data, L, W, H):
+        # Select all lattice points
+        z_lower = -H / 2
+        z_upper = H / 2
+        lattice_rows = data[
+            (data["Z [mm]"] >= z_lower) &
+            (data["Z [mm]"] <= z_upper)
+        ]
+
+        # Compute average U_x (positive direction) - enfore rightwards movement
+        mean_U_x_right = lattice_rows["U_x [m]"].mean()
+
+        return mean_U_x_right
+
     def ntop_sims(self, action):
         # Function to import and analyze the FEA simulation data from nTop.
         L, W, H = action[2], action[3], action[4] #Length Width and Height of current lattice structure
@@ -303,6 +317,7 @@ class LatticeEnv(Env):
         N_disp_sims = len(self.Loads) # Number of Specified Load simulations in nTop file
         U_z = np.zeros(N_disp_sims) # Initialize array for data
         npr = np.zeros(N_disp_sims) # Initialize array for data
+        dir_deform = np.zeros(N_disp_sims) # Initialize array for data
         for i in range(1, 1+N_disp_sims):
             disp_file = RL_folder+f"displacement_{i}.csv"
             data = pd.read_csv(disp_file, header=None)
@@ -313,6 +328,9 @@ class LatticeEnv(Env):
 
             # Get negative poisson ratio constraint for last 
             npr[i-1] = self.get_npr(data, L, W, H) # unit: m
+
+            # Get directional deformation
+            dir_deform[i-1] = self.direction_deformation(data, L, W, H)
         
         # Make arrays to integrate Force-displacement courve
         y = np.concatenate((np.array([0]), -np.asarray(self.Loads)))
@@ -324,9 +342,9 @@ class LatticeEnv(Env):
         gradiants = (stress[1:]-stress[:-1])/(strain[1:]-strain[:-1])
         E_c = np.mean(gradiants) # Estimated Compressive Elasticity modulus, unit: MPa
 
-        return stress_vars, stress_maxs, Energy_absorbed, E_c, npr
+        return stress_vars, stress_maxs, Energy_absorbed, E_c, npr, dir_deform
 
-    def reward_calc(self, s_vars, s_maxs, E_abs, E_c, npr, rel_density, action):
+    def reward_calc(self, s_vars, s_maxs, E_abs, E_c, npr, dir_deform, rel_density, action):
         # Calculates the reward for the RL training
         # To optimize training, this function/weights should be tuned as desired - significant time
 
@@ -345,6 +363,7 @@ class LatticeEnv(Env):
         Ec = E_c * 1/50 # Compressive E [MPa] * weight
         Ea = E_abs * 30 # Energy Absorbed [J] * weight
         npr = npr[-1] # Negative Poisson Ratio criterion - Avearge displacement towards center from center of side walls
+        dir = dir_deform[-1] # Directional deformation criterie - rightwards (U_x +) is positive
         # Negative components (The lower the better)
         Lw = action[2] * 1/3 # Length of lattice [mm] * weight
         Ww = action[3] * 1/3 # Width of lattice [mm] * weight
@@ -357,7 +376,12 @@ class LatticeEnv(Env):
 
         # Manually change and tailor this function to optimize for desired values
         # reward = Ec + Ea + np - Lw - Ww - Hw - sv - sm - bt - cc - rd - dm
-        reward = npr # unit [mm]
+
+        # reward = npr # unit [mm] - For negative poisson's ratio reward
+        # reward = Ec # unit [MPa/50] - for optimal (high) stiffness
+        # reward = dir # unit [mm] - rightwards movement / controlled deformation
+
+        reward = #Define appropriate reward value
 
         # Protection against infinite reward
         if not np.isfinite(reward):
@@ -366,7 +390,7 @@ class LatticeEnv(Env):
 
         return float(reward)
 
-# Callback to track rewards during training. DON'T CHANGE - necessary for RL wo tork properly
+# Callback to track rewards during training. Necessary for RL to work properly
 class RewardLoggerCallback(BaseCallback):
     def __init__(self, verbose=0):
         super().__init__(verbose)
@@ -393,12 +417,15 @@ class RewardLoggerCallback(BaseCallback):
 reward_logger = RewardLoggerCallback(verbose=1)
 
 def reward_calc_failed():
-    # Small function to give mean or -1 reward in case simulations failed due to meshing or infinite reward gradient.
+    # Small function to give mean or -5 reward in case simulations failed due to meshing or infinite reward gradient.
     if len(reward_logger.episode_rewards) != 0:
         reward = np.mean(reward_logger.episode_rewards)
     else:
         reward = -5 # Chosen because roughly equal to worst possible reward froms succesfull simulation
-    reward = -5
+    # Currently, fail always leads to reward of -5
+    # reward = -5 # For reward=npr
+    # reward = 0 # For reward=Ec & Control deformation
+    reward = #Define appropriate reward for failed simulation. maybe just 0.
     return reward
 
 #%% Train the RL model
@@ -428,7 +455,7 @@ def opt_design(savedmodel, i, episodes_per_figure):
     Z = action[5:].reshape(5,5)
     contour = plt.contourf(X, Y, Z, cmap='jet', levels=100)
     plt.colorbar(contour, label="Relative Average Distance Between Seeds")
-    plt.title(f'Episode {(i+1)*episodes_per_figure}')
+    plt.title(f'Episode {(i+1)*episodes_per_figure + 350}')
     plt.axis("equal")
     plt.tight_layout()
     plt.show()
@@ -436,9 +463,9 @@ def opt_design(savedmodel, i, episodes_per_figure):
 
 
 # If one wants to get optimal actions out every X episode
-episodes_per_figure = 2 # How many episodes per loop - Needs to be even number. 10 episodes  = 1 hour
-number_loops = 1 # How many loops
-filename = "npr_ppo_lattice_model"
+episodes_per_figure = #50 # How many episodes per loop - Needs to be even number. 10 episodes ~ 0.8 hours
+number_loops = #10 # How many loops
+filename = #"new_ppo_lattice_model"
 reward_tracer = np.zeros(episodes_per_figure*number_loops)
 for i in range(number_loops):
     env = DummyVecEnv([lambda: LatticeEnv()])
@@ -451,7 +478,7 @@ for i in range(number_loops):
                     batch_size=2, n_steps=2,
                     device="cpu")
 
-    # If one wants to continue previous saved training.
+    # To continue previous saved training.
     if os.path.exists(filename):
         RL_model = PPO.load(filename, env=env, device="cpu")
 
@@ -471,7 +498,7 @@ for i in range(number_loops):
 
     opt_design(filename, i, episodes_per_figure)
 
-# Save reward file manually if desired
-np.savetxt("npr_500.csv", reward_logger.episode_rewards, delimiter=",")
+# Save reward file manually if desired - specify new datafile name 
+np.savetxt(#"new_0_to_500.csv", reward_logger.episode_rewards, delimiter=",")
 
 # One can now run these through ntop to generate the optimal lattice structure
