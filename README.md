@@ -106,12 +106,12 @@ CNN_training_png - folder with all PNGs to be used for CNN training. 29 pre-thes
 
 CNN_training_png_expanded - the expanded version of the previous folder, with the artificial extra data.
 
-json_files - Folder to hold the automatically generated json files which are used to automate the nTop design through the automade code.
+json_files - Folder to hold the automatically generated json files, which are used to automate the nTop design through the automade code.
 
 png_images - currently holds a few lattices used to validate CNN results. 
 
 RL_training_folder - folder which contains all intermediate files for RL training (CSV, JSON, STL, PNG).
 
-Pre_thesis_data.zip - zip folder containing all data gathered in pre-thesis, which has been used ofr preliminary testing, development, and validation of simulations
+Pre_thesis_data.zip - zip folder containing all data gathered in pre-thesis, which has been used for preliminary testing, development, and validation of simulations
 
-prime_RL_heterogenous - folder to be copied into PRIME for training on cluster. Data for training should be placed in this folder under correct name and format.
+npr_ppo_lattice_model_350, npr_ppo_lattice_model_600, Ec_ppo_lattice_model & Control_ppo_lattice_model zip files are the trained models from the published article
