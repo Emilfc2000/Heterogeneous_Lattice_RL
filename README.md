@@ -54,7 +54,8 @@ To run Reinforcement Learning Framework v3: (with ntop simulations AND controlla
 
 3: Set total time_steps in the code (at the bottom) - this indicates the number of episodes the RL code will run. On a brand new high-end gaming laptop, one episode is roughly 400 seconds
 
-4: Run the RL code, and it will optimize the design parameters. One can also change the range of the design parameters in the begging of the environment class, to specify limits.
+4: Run the RL code, and it will optimize the design parameters. One can also change the range of the design parameters at the beginning of the environment class to specify limits before training.
+
 --------------------
 
 ## Python files:
