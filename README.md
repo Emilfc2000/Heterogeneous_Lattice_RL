@@ -57,35 +57,6 @@ To run Reinforcement Learning Framework v3: (with ntop simulations AND controlla
 4: Run the RL code, and it will optimize the design parameters. One can also change the range of the design parameters in the begging of the environment class, to specify limits.
 --------------------
 
-To run on PRIME cluster - DOES NOT WORK CURRENTLY
-
-Go to prime_RL_heterogneous folder - ensure RL_prime_code has correct total_timesteps and other parameters.
-
-Ensure all training data (pngs and npz data files with E_c and curves) are in correct format and has correct names to interact with RL and CNN code
-
-scp the prime_RL_heterogeneous folder to prime /com/meadd (This folder includes slightly varied versions of the necessary files for PRIME to run: RL code, CNN code, nTop file, training pngs and target curves and E_cs.)
-
-(Is done by writing on terminal on own PC: "scp my_pc_path/to_file.txt auXXXXXX@prime.eng.au.dk:path_to/location *prime_password*)
-
-Simply run the RL_prime_code
-
---------------------
-Accessing PRIME cluster
-
-Open Terminal
-
-"ssh auXXXXXX@ssh.au.dk"
-
-"*au-password*"
-
-Accept 2-Factor-Authentication
-
-"ssh auXXXXXX@prime.eng.au.dk"
-
-"*Prime-Password*"
-
---------------------
-
 ## Python files:
 
 Generate_csv_w_lattice_parameters.py - generate csv file with design parameters for desired number of lattice structures "lattice_parameters.csv"
