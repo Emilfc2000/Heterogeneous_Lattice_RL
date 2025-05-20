@@ -17,13 +17,13 @@ from scipy.stats import linregress
 # arrays = [np.asarray(first30)] + [np.loadtxt(fname, delimiter=",") for fname in file_list]
 # long_array = np.concatenate(arrays)
 # fail_value = -5.0
-# plotname = 'first Poissons ratio attempt'
+# plotname = f'First Poissons Ratio Optimization, $\\nu$, Attempt'
 
 
 # # Negative poisson ratio Attempt 2
 # long_array = np.loadtxt('npr_600.csv', delimiter=',')
 # fail_value = -5.0
-# plotname = 'second Poissons ratio attempt'
+# plotname = f'Second Poissons Ratio, $\\nu$, Optimization Attempt'
 
 
 # # E_c optimization:
@@ -31,7 +31,7 @@ from scipy.stats import linregress
 # arrays = [np.loadtxt(fname, delimiter=",") for fname in file_list]
 # long_array = np.concatenate(arrays)
 # fail_value = 0.0
-# plotname = f'$E_c$'
+# plotname = f'Compressibe Elastic Modulus, $E_c$, Optimization'
 
 
 # Controlled Deformation optimization:
@@ -39,7 +39,7 @@ file_list = ['Control_0_to_150.csv','Control_150_to_200.csv','Control_200_to_350
 arrays = [np.loadtxt(fname, delimiter=",") for fname in file_list]
 long_array = np.concatenate(arrays)
 fail_value = 0.0
-plotname = 'Controlled Deformation'
+plotname = f'Controlled Deformation, $U_x$, Optimization'
 
 # Plot 1: just the data
 x = np.arange(len(long_array))
@@ -72,7 +72,9 @@ mask_zero = y == fail_value
 plt.plot(x[mask_zero], y[mask_zero], linestyle='None', marker='x', color='red', label=f'Failed Simulations (total: {failed_sims})')
 
 # Plot regression line
-plt.plot(x, regression_line, label=f'Linear Regression, Slope = {slope:.2e}', color='black')
+plt.plot(x, regression_line, label=f'Linear Regression, Slope = {slope:.2e}', color='lime', linewidth = 3)
+plt.plot([x[0],x[-1]], [regression_line[0], regression_line[0]], label='Horizontal Comparison', color='red', linestyle='dashed')#, linewidth = 2)
+
 
 plt.xlabel('Episodes')
 plt.ylabel('Reward')
