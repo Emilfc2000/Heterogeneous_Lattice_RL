@@ -31,7 +31,7 @@ To Run Reinforcement Learning framework v1 (with CNN + data) one must:
 8: Set total_timesteps in Reinforcement_Learning_v1, and run it for the desired training duration
 
 --------------------
-**Framework Version 1: RL + nTop simulation**
+**Framework Version 2: RL + nTop simulation**
 
 To run Reinforcement Learning Framework v2: (with ntop simulations), one must:
 
